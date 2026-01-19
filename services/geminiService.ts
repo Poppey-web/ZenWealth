@@ -2,8 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Asset } from "../types.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const extractJson = (str: string): any => {
   if (!str) return null;
   // Nettoyage Markdown
@@ -33,6 +31,8 @@ const extractJson = (str: string): any => {
 export const getPortfolioInsights = async (assets: Asset[]) => {
   if (assets.length === 0) return "Ajoutez des actifs pour recevoir une analyse personnalisée.";
   
+  // Fix: Directly use process.env.API_KEY in the constructor according to guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const portfolioSummary = assets.map(a => `${a.name} (${a.category}): ${a.value}€`).join(", ");
   
   try {
@@ -67,6 +67,8 @@ export interface HealthScoreResult {
 export const getAssetHealthScores = async (assets: Asset[]): Promise<HealthScoreResult[]> => {
   if (assets.length === 0) return [];
 
+  // Fix: Always use direct process.env.API_KEY initialization
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const assetDataForAi = assets.map(a => ({
     id: a.id,
     name: a.name,
@@ -120,6 +122,8 @@ export const syncMarketPrices = async (assets: Asset[]) => {
   const assetsToSync = assets.filter(a => a.category === 'Stocks' || a.category === 'Crypto');
   if (assetsToSync.length === 0) return { updates: [], sources: [] };
 
+  // Fix: Directly use process.env.API_KEY in the constructor according to guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const prompt = `Trouve le PRIX UNITAIRE actuel en EURO (pour 1 unité de l'actif) pour les positions suivantes. 
   Il est crucial de donner le prix le plus récent possible.
   Réponds uniquement au format JSON: [{"id": "...", "unitPrice": 0.0, "change24h": 0.0}].

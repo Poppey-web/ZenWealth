@@ -80,7 +80,8 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
       </div>
 
       <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-        {Object.entries(groupedAssets).map(([category, items]) => (
+        {/* Fix: Explicitly cast Object.entries result to [string, Asset[]][] to prevent TS from inferring "items" as unknown */}
+        {(Object.entries(groupedAssets) as [string, Asset[]][]).map(([category, items]) => (
           <div key={category} className="p-8 md:p-10">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-4">
                {category}
