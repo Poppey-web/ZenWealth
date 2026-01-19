@@ -79,7 +79,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Helper pour mapper les champs JS vers les colonnes SQL snake_case
   const mapAssetToDb = (a: any) => ({
     name: a.name,
     category: a.category,
@@ -91,6 +90,17 @@ const App: React.FC = () => {
     tags: Array.isArray(a.tags) ? a.tags : [],
     change24h: a.change24h || 0,
   });
+
+  const handleDeleteAsset = async (id: string) => {
+    try {
+      const { error } = await supabase.from('assets').delete().eq('id', id);
+      if (error) throw error;
+      setAssets(assets.filter(a => a.id !== id));
+      showToast("Position supprimée avec succès", "success");
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
+  };
 
   const handleSyncPrices = async () => {
     if (syncing || assets.length === 0) return;
@@ -173,7 +183,7 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
                 <div className="xl:col-span-2 space-y-8">
                   <PortfolioCharts history={[]} assets={assets} />
-                  <AssetList isPrivate={isPrivate} assets={assets} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />
+                  <AssetList isPrivate={isPrivate} assets={assets} onDeleteAsset={handleDeleteAsset} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />
                 </div>
                 <div className="sticky top-10">
                    <AIAdvisor assets={assets} onScoresUpdate={setHealthScores} />
@@ -181,7 +191,7 @@ const App: React.FC = () => {
               </div>
             </div>
           )}
-          {activeTab === 'assets' && <AssetList isPrivate={isPrivate} assets={assets} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />}
+          {activeTab === 'assets' && <AssetList isPrivate={isPrivate} assets={assets} onDeleteAsset={handleDeleteAsset} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />}
           {activeTab === 'compare' && <ComparisonView assets={assets} />}
           {activeTab === 'watchlist' && <WatchlistView userId={session.user.id} />}
           {activeTab === 'recommendations' && <Recommendations assets={assets} />}

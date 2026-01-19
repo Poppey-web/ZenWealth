@@ -29,42 +29,42 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout, us
 
   return (
     <div className={`${isCollapsed ? 'w-24' : 'w-64'} bg-white dark:bg-slate-950 h-screen border-r border-slate-200 dark:border-slate-800 hidden md:flex flex-col fixed left-0 top-0 z-50 transition-all duration-300`}>
-      <div className={`p-8 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+      <div className={`p-6 flex items-center h-24 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         {!isCollapsed && (
-          <h1 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-            <span className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-sm">ZW</span>
-            ZenWealth
+          <h1 className="text-xl font-black text-indigo-600 dark:text-indigo-400 flex items-center gap-2 min-w-0">
+            <span className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xs shrink-0 shadow-lg shadow-indigo-200 dark:shadow-none">ZW</span>
+            <span className="truncate">ZenWealth</span>
           </h1>
         )}
         <button 
           onClick={onToggleCollapse}
-          className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 transition-all ${isCollapsed ? 'mt-4' : ''}`}
+          className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 transition-all shrink-0 hover:scale-110 active:scale-90 ${isCollapsed ? '' : 'ml-2'}`}
         >
           {isCollapsed ? '➡' : '⬅'}
         </button>
       </div>
       
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all ${
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl transition-all ${
               activeTab === item.id
-                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-black'
-                : 'text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold'
+                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-black shadow-sm'
+                : 'text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50'
             } ${isCollapsed ? 'justify-center' : ''}`}
             title={isCollapsed ? item.label : ''}
           >
             <span className="text-xl">{item.icon}</span>
-            {!isCollapsed && <span className="text-sm tracking-tight">{item.label}</span>}
+            {!isCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
           </button>
         ))}
       </nav>
       
       <div className={`p-6 border-t border-slate-100 dark:border-slate-800 ${isCollapsed ? 'flex justify-center' : ''}`}>
-        <div className="flex items-center gap-3 px-2">
-          <div className="relative">
+        <div className="flex items-center gap-3 px-1 min-w-0">
+          <div className="relative shrink-0">
             <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl shadow-sm border border-slate-200 dark:border-slate-700">
               {avatar}
             </div>
