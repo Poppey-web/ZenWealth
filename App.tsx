@@ -91,6 +91,10 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * IMPORTANT: Transforme strictement les données Frontend (CamelCase) 
+   * en données Backend Supabase (snake_case) pour éviter les erreurs 400.
+   */
   const mapAssetToDb = (a: any) => ({
     name: a.name,
     category: a.category,
@@ -99,7 +103,7 @@ const App: React.FC = () => {
     value: a.value,
     yield_apy: a.yieldAPY,
     fee_percentage: a.feePercentage,
-    tags: a.tags,
+    tags: Array.isArray(a.tags) ? a.tags : [],
     change24h: a.change24h || 0,
   });
 
@@ -166,10 +170,10 @@ const App: React.FC = () => {
           <div className="flex gap-4">
             {(activeTab === 'dashboard' || activeTab === 'assets') && (
               <>
-                <button onClick={handleSyncPrices} disabled={syncing} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase border dark:border-slate-700 shadow-sm disabled:opacity-50">
+                <button onClick={handleSyncPrices} disabled={syncing} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase border dark:border-slate-700 shadow-sm disabled:opacity-50 transition-opacity">
                   {syncing ? 'Synchro...' : 'Mise à jour'}
                 </button>
-                <button onClick={() => { setEditingAsset(null); setIsModalOpen(true); }} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl">
+                <button onClick={() => { setEditingAsset(null); setIsModalOpen(true); }} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl hover:scale-105 active:scale-95 transition-all">
                   + Ajouter
                 </button>
               </>

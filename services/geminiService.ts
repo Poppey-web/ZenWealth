@@ -2,17 +2,32 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Asset } from "../types.ts";
 
+/**
+ * Valide et récupère la clé API.
+ * Gère les cas où Vercel n'injecte pas correctement la variable dans le contexte browser.
+ */
+const getSafeApiKey = (): string | null => {
+  const key = process.env.API_KEY;
+  if (!key || key === "undefined" || key === "null" || key.trim() === "") {
+    return null;
+  }
+  return key;
+};
+
 const handleAiError = (error: any): string => {
-  console.error("Gemini AI Error Trace:", error);
+  console.error("ZenIA Debug Log:", error);
   const msg = error?.message || String(error);
   
   if (msg.includes("API key expired") || msg.includes("API_KEY_INVALID") || msg.includes("400")) {
-    return "⚠️ Action Requise : Votre clé API Gemini a expiré ou est invalide. Veuillez générer une nouvelle clé sur Google AI Studio et la mettre à jour dans vos variables d'environnement Vercel.";
+    return "⚠️ Clé API expirée ou invalide. Veuillez renouveler votre clé sur Google AI Studio et redéployer sur Vercel.";
   }
-  if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) {
-    return "⏳ Limite atteinte : Le quota gratuit de l'IA est épuisé. Veuillez réessayer dans quelques minutes.";
+  if (msg.includes("API Key must be set") || msg.includes("not found")) {
+    return "⚙️ Configuration manquante : La variable d'environnement API_KEY n'est pas accessible par le navigateur. Vérifiez vos réglages Vercel.";
   }
-  return "L'analyse IA est temporairement indisponible (vérifiez votre connexion ou votre clé API).";
+  if (msg.includes("429") || msg.includes("quota")) {
+    return "⏳ Quota IA épuisé. Réessayez dans quelques minutes.";
+  }
+  return "L'analyse IA est momentanément indisponible.";
 };
 
 const extractJson = (str: string): any => {
@@ -30,8 +45,9 @@ const extractJson = (str: string): any => {
 
 export const getPortfolioInsights = async (assets: Asset[]) => {
   if (assets.length === 0) return "Ajoutez des actifs pour recevoir une analyse personnalisée.";
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined" || apiKey === "") return "Clé API non configurée.";
+  
+  const apiKey = getSafeApiKey();
+  if (!apiKey) return "Configuration Requise : La clé API Gemini n'est pas détectée. Assurez-vous d'avoir ajouté 'API_KEY' dans les variables d'environnement Vercel et d'avoir redéployé.";
 
   try {
     const ai = new GoogleGenAI({ apiKey });
@@ -55,8 +71,8 @@ export interface HealthScoreResult {
 
 export const getAssetHealthScores = async (assets: Asset[]): Promise<HealthScoreResult[]> => {
   if (assets.length === 0) return [];
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") return [];
+  const apiKey = getSafeApiKey();
+  if (!apiKey) return [];
 
   try {
     const ai = new GoogleGenAI({ apiKey });
@@ -91,6 +107,7 @@ export const getAssetHealthScores = async (assets: Asset[]): Promise<HealthScore
     });
     return extractJson(response.text) || [];
   } catch (e) {
+    console.error("Health Score Error:", e);
     return [];
   }
 };
@@ -98,8 +115,9 @@ export const getAssetHealthScores = async (assets: Asset[]): Promise<HealthScore
 export const syncMarketPrices = async (assets: Asset[]) => {
   const assetsToSync = assets.filter(a => a.category === 'Stocks' || a.category === 'Crypto');
   if (assetsToSync.length === 0) return { updates: [] };
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") throw new Error("Clé API absente.");
+  
+  const apiKey = getSafeApiKey();
+  if (!apiKey) throw new Error("Clé API absente de la configuration.");
 
   try {
     const ai = new GoogleGenAI({ apiKey });
