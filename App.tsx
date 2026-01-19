@@ -29,7 +29,6 @@ const App: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
   
-  // Settings
   const [displayName, setDisplayName] = useState(localStorage.getItem('zen_display_name') || '');
   const [avatar, setAvatar] = useState(localStorage.getItem('zen_avatar') || '🧘');
   const [freedomGoal, setFreedomGoal] = useState(() => Number(localStorage.getItem('zen_freedom_goal')) || 1000000);
@@ -80,6 +79,19 @@ const App: React.FC = () => {
     }
   };
 
+  // Helper pour mapper les champs JS vers les colonnes SQL snake_case
+  const mapAssetToDb = (a: any) => ({
+    name: a.name,
+    category: a.category,
+    quantity: a.quantity,
+    unit_price: a.unitPrice,
+    value: a.value,
+    yield_apy: a.yieldAPY,
+    fee_percentage: a.feePercentage,
+    tags: Array.isArray(a.tags) ? a.tags : [],
+    change24h: a.change24h || 0,
+  });
+
   const handleSyncPrices = async () => {
     if (syncing || assets.length === 0) return;
     setSyncing(true);
@@ -121,7 +133,7 @@ const App: React.FC = () => {
   if (!session) return <Auth onLogin={() => {}} />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row transition-all duration-500">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row transition-all duration-500 overflow-x-hidden">
       <Sidebar 
         activeTab={activeTab} setActiveTab={setActiveTab} 
         onLogout={() => supabase.auth.signOut()} 
@@ -136,17 +148,17 @@ const App: React.FC = () => {
       )}
 
       <main className={`flex-1 p-4 md:p-10 pb-28 overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-24' : 'md:ml-64'}`}>
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-6">
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
             {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
           </h1>
           <div className="flex gap-4">
             {(activeTab === 'dashboard' || activeTab === 'assets') && (
               <>
-                <button onClick={handleSyncPrices} disabled={syncing} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase border dark:border-slate-700 shadow-sm disabled:opacity-50">
+                <button onClick={handleSyncPrices} disabled={syncing} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase border dark:border-slate-700 shadow-sm disabled:opacity-50 hover:bg-slate-50 transition-all">
                   {syncing ? 'Synchro...' : 'Mise à jour'}
                 </button>
-                <button onClick={() => { setEditingAsset(null); setIsModalOpen(true); }} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl hover:scale-105 active:scale-95 transition-all">
+                <button onClick={() => { setEditingAsset(null); setIsModalOpen(true); }} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-indigo-700 transition-all">
                   + Ajouter
                 </button>
               </>
@@ -156,14 +168,14 @@ const App: React.FC = () => {
 
         <div className="max-w-7xl mx-auto">
           {activeTab === 'dashboard' && (
-            <div className="space-y-10">
+            <div className="space-y-8">
               <StatsHeader stats={stats} goal={freedomGoal} />
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
                 <div className="xl:col-span-2 space-y-8">
                   <PortfolioCharts history={[]} assets={assets} />
                   <AssetList isPrivate={isPrivate} assets={assets} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />
                 </div>
-                <div className="space-y-6">
+                <div className="sticky top-10">
                    <AIAdvisor assets={assets} onScoresUpdate={setHealthScores} />
                 </div>
               </div>
@@ -188,11 +200,13 @@ const App: React.FC = () => {
       </main>
 
       <AddAssetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={async (a) => {
-        const { error } = await supabase.from('assets').insert([{...a, unit_price: a.unitPrice, user_id: session.user.id}]);
+        const dbData = { ...mapAssetToDb(a), user_id: session.user.id };
+        const { error } = await supabase.from('assets').insert([dbData]);
         if (error) showToast(error.message, 'error');
         else { showToast("Actif ajouté !", "success"); fetchAssets(); }
       }} onUpdate={async (a) => {
-        const { error } = await supabase.from('assets').update({...a, unit_price: a.unitPrice}).eq('id', a.id);
+        const dbData = mapAssetToDb(a);
+        const { error } = await supabase.from('assets').update(dbData).eq('id', a.id);
         if (error) showToast(error.message, 'error');
         else { showToast("Actif mis à jour !", "success"); fetchAssets(); }
       }} assets={assets} initialAsset={editingAsset} />

@@ -47,7 +47,9 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
     if (selectedCategory) filtered = filtered.filter(a => a.category === selectedCategory);
     
     const groups: Record<string, Asset[]> = {};
-    Object.values(AssetCategory).forEach(category => {
+    const categories = Object.values(AssetCategory);
+    
+    categories.forEach(category => {
       const catAssets = filtered.filter(a => a.category === category);
       if (catAssets.length > 0) groups[category] = catAssets;
     });
@@ -60,10 +62,10 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
   }, [assets]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-all overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-all overflow-hidden">
       {assetToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[3rem] shadow-2xl p-10 border border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 dark:border-slate-800">
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 text-center">Supprimer l'actif ?</h3>
             <div className="flex gap-4">
               <button onClick={() => setAssetToDelete(null)} className="flex-1 px-4 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500">Annuler</button>
@@ -73,60 +75,64 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
         </div>
       )}
 
-      <div className="p-8 md:p-10 border-b border-slate-50 dark:border-slate-800 space-y-6">
+      <div className="p-6 md:p-8 border-b border-slate-50 dark:border-slate-800 space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Positions</h3>
-          <div className="flex gap-2">
-            <button onClick={() => { setSelectedTag(null); setSelectedCategory(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">Réinitialiser</button>
-          </div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">Mes Actifs</h3>
+          <button onClick={() => { setSelectedTag(null); setSelectedCategory(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">Réinitialiser</button>
         </div>
         
-        {/* Catégories */}
-        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+        {/* Filtre Catégories - Style Pills */}
+        <div className="flex overflow-x-auto gap-2.5 pb-2 scrollbar-hide -mx-2 px-2">
           <button 
             onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!selectedCategory ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
+            className={`px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!selectedCategory ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500'}`}
           >Tout</button>
           {Object.values(AssetCategory).map(cat => (
             <button 
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
-            >{cat}</button>
+              className={`px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 ${selectedCategory === cat ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500'}`}
+            >
+              <span>{getCategoryIcon(cat)}</span>
+              <span>{cat}</span>
+            </button>
           ))}
         </div>
 
-        {/* Tags */}
-        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide border-t border-slate-50 dark:border-slate-800 pt-4">
-          {availableTags.map(tag => (
-            <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? null : tag)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedTag === tag ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 text-indigo-600' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}>#{tag}</button>
-          ))}
-        </div>
+        {/* Tags Filtre */}
+        {availableTags.length > 0 && (
+          <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide pt-2">
+            {availableTags.map(tag => (
+              <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? null : tag)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedTag === tag ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 text-indigo-600' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}>#{tag}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
         {(Object.entries(groupedAssets) as [string, Asset[]][]).map(([category, items]) => (
-          <div key={category} className="p-6 md:p-8">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
+          <div key={category} className="p-5 md:p-6 bg-slate-50/20 dark:bg-slate-900/40">
+            <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-3">
                {category}
-               <div className="flex-1 h-px bg-slate-50 dark:bg-slate-800" />
+               <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+               <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{items.length}</span>
             </h4>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {items.map((asset) => (
-                <div key={asset.id} className="flex items-center justify-between group p-4 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-800" onClick={() => onEditAsset?.(asset)}>
-                  <div className="flex items-center gap-5">
-                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl transition-transform group-hover:scale-110 ${getCategoryColor(asset.category as AssetCategory)}`}>
+                <div key={asset.id} className="flex items-center justify-between group p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-md transition-all cursor-pointer border border-slate-50 dark:border-slate-800" onClick={() => onEditAsset?.(asset)}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-11 h-11 rounded-xl border flex items-center justify-center text-lg transition-transform group-hover:scale-105 ${getCategoryColor(asset.category as AssetCategory)}`}>
                       {getCategoryIcon(asset.category as AssetCategory)}
                     </div>
                     <div>
-                      <p className="font-black text-slate-900 dark:text-white text-base">{asset.name}</p>
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{asset.quantity} Unités</p>
+                      <p className="font-black text-slate-900 dark:text-white text-sm">{asset.name}</p>
+                      <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{asset.quantity} {asset.category === AssetCategory.CASH ? 'Unités' : (asset.category === AssetCategory.CRYPTO ? 'Coins' : 'Actions')}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-5">
                     <div className="text-right">
-                      <p className="font-black text-slate-900 dark:text-white text-lg leading-none mb-1.5">{formatCurrency(asset.value)}</p>
-                      <div className={`text-[10px] font-black ${ (asset.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      <p className="font-black text-slate-900 dark:text-white text-base leading-none mb-1">{formatCurrency(asset.value)}</p>
+                      <div className={`text-[9px] font-black ${ (asset.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {(asset.change24h || 0) >= 0 ? '▲' : '▼'} {Math.abs(asset.change24h || 0).toFixed(2)}%
                       </div>
                     </div>
@@ -143,7 +149,7 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
           </div>
         ))}
         {assets.length === 0 && (
-          <div className="p-32 text-center text-slate-400 font-black uppercase tracking-widest text-xs">Aucun actif enregistré</div>
+          <div className="p-24 text-center text-slate-400 font-black uppercase tracking-widest text-xs">Aucun actif enregistré</div>
         )}
       </div>
     </div>

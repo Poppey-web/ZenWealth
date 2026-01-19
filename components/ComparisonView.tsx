@@ -34,47 +34,54 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ assets }) => {
 
   const toggleSelection = (id: string) => {
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(i => i !== id));
+      if (selectedIds.length > 1) setSelectedIds(selectedIds.filter(i => i !== id));
     } else if (selectedIds.length < 5) {
       setSelectedIds([...selectedIds, id]);
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="mb-10">
-          <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Comparateur de Performance</h3>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">Comparaison relative (Base 100)</p>
+    <div className="space-y-6 animate-in fade-in duration-700">
+      <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm transition-all">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Comparateur de Performance</h3>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+              Base 100 : Évolution relative des actifs sélectionnés
+            </p>
+          </div>
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-full">
+            {selectedIds.length} / 5 Sélectionnés
+          </div>
         </div>
 
-        {/* Sélection des actifs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-10">
+        {/* Sélection des actifs - Nouveau Design Scrollable horizontal si trop de contenu */}
+        <div className="flex overflow-x-auto gap-3 pb-6 -mx-2 px-2 scrollbar-hide mb-4">
           {assets.map((asset, i) => (
             <button 
               key={asset.id} 
               onClick={() => toggleSelection(asset.id)}
-              className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 text-center ${selectedIds.includes(asset.id) ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400 hover:border-slate-200 dark:hover:border-slate-700'}`}
+              className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex flex-col items-center justify-center min-w-[120px] h-24 ${selectedIds.includes(asset.id) ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400 hover:border-slate-200 dark:hover:border-slate-700'}`}
             >
-              <div className="truncate">{asset.name}</div>
-              <div className="text-[8px] opacity-60 mt-1">{asset.category}</div>
+              <div className="text-lg mb-1">{asset.category === 'Crypto' ? '🪙' : asset.category === 'Stocks' ? '📊' : '💰'}</div>
+              <div className="truncate w-full text-center">{asset.name}</div>
             </button>
           ))}
         </div>
 
-        {/* Graphique */}
-        <div className="h-[400px] w-full bg-slate-50/50 dark:bg-slate-950/30 rounded-[2rem] p-6 border border-slate-50 dark:border-slate-800">
+        {/* Graphique avec Glassmorphism léger */}
+        <div className="h-[420px] w-full bg-slate-50/50 dark:bg-slate-950/40 rounded-[2rem] p-4 md:p-8 border border-slate-50 dark:border-slate-800/50">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 'bold'}} />
+            <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" className="dark:opacity-5" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: '900'}} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} domain={['auto', 'auto']} />
               <Tooltip 
-                contentStyle={{ borderRadius: '20px', border: 'none', background: '#0f172a', color: 'white', padding: '15px' }} 
-                itemStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}
-                formatter={(v: number) => [`${v}%`, 'Valeur Relative']}
+                contentStyle={{ borderRadius: '16px', border: 'none', background: '#0f172a', color: 'white', padding: '12px', fontSize: '11px', fontWeight: 'bold' }} 
+                cursor={{ stroke: '#4f46e5', strokeWidth: 1, strokeDasharray: '5 5' }}
               />
-              <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', paddingBottom: '20px' }} />
+              <Legend verticalAlign="top" height={40} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
               {selectedIds.map((id, i) => (
                 <Line 
                   key={id} 
@@ -83,31 +90,32 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ assets }) => {
                   name={assets.find(a => a.id === id)?.name} 
                   stroke={COLORS[i % COLORS.length]} 
                   strokeWidth={4} 
-                  dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                  animationDuration={1500}
+                  dot={false}
+                  activeDot={{ r: 6, strokeWidth: 0, fill: COLORS[i % COLORS.length] }}
                 />
               ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Stats Récapitulatives */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+        {/* Cartes Stats en bas */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-10">
            {selectedIds.map((id, i) => {
              const asset = assets.find(a => a.id === id);
              if (!asset) return null;
+             const finalVal = chartData[chartData.length - 1][id];
+             const perf = finalVal - 100;
              return (
-               <div key={id} className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+               <div key={id} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <p className="text-[9px] font-black text-slate-400 uppercase truncate">{asset.name}</p>
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <p className="text-[8px] font-black text-slate-400 uppercase truncate">{asset.name}</p>
                   </div>
-                  <div className="flex justify-between items-end">
-                    <p className="text-lg font-black text-slate-900 dark:text-white">{asset.value.toLocaleString()} €</p>
-                    <span className={`text-[10px] font-black ${asset.change24h && asset.change24h >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {asset.change24h && asset.change24h >= 0 ? '+' : ''}{asset.change24h}%
-                    </span>
+                  <div>
+                    <p className="text-base font-black text-slate-900 dark:text-white leading-none mb-1">{finalVal.toFixed(1)}%</p>
+                    <p className={`text-[9px] font-black ${perf >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {perf >= 0 ? '▲' : '▼'} {Math.abs(perf).toFixed(1)}%
+                    </p>
                   </div>
                </div>
              )
