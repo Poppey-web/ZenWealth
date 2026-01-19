@@ -10,7 +10,6 @@ import CashFlow from './components/CashFlow.tsx';
 import Budgeting from './components/Budgeting.tsx';
 import Auth from './components/Auth.tsx';
 import SettingsView from './components/SettingsView.tsx';
-import Projections from './components/Projections.tsx';
 import Recommendations from './components/Recommendations.tsx';
 import News from './components/News.tsx';
 import ComparisonView from './components/ComparisonView.tsx';
@@ -38,7 +37,6 @@ const App: React.FC = () => {
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'EUR');
 
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [history, setHistory] = useState<ChartDataPoint[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -93,6 +91,19 @@ const App: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Helper pour convertir un objet Asset (camelCase) en format Supabase (snake_case)
+  const mapAssetToDb = (a: any) => ({
+    name: a.name,
+    category: a.category,
+    quantity: a.quantity,
+    unit_price: a.unitPrice,
+    value: a.value,
+    yield_apy: a.yieldAPY,
+    fee_percentage: a.feePercentage,
+    tags: a.tags,
+    change24h: a.change24h,
+  });
 
   const handleSyncPrices = async () => {
     if (syncing || assets.length === 0) return;
@@ -213,7 +224,7 @@ const App: React.FC = () => {
               <StatsHeader stats={stats} goal={freedomGoal} />
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
                 <div className="xl:col-span-2 space-y-8">
-                  <PortfolioCharts history={history} assets={assets} />
+                  <PortfolioCharts history={[]} assets={assets} />
                   <AssetList isPrivate={isPrivate} assets={assets} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />
                 </div>
                 <AIAdvisor assets={assets} onScoresUpdate={setHealthScores} />
@@ -223,7 +234,6 @@ const App: React.FC = () => {
 
           {activeTab === 'assets' && (
             <div className="space-y-10">
-               {/* Fixed layout to prevent StatsHeader from being "crushed" */}
                <StatsHeader stats={stats} goal={freedomGoal} />
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
@@ -269,11 +279,23 @@ const App: React.FC = () => {
       </main>
 
       <AddAssetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={async (a) => {
-        const { error } = await supabase.from('assets').insert([{ ...a, user_id: session.user.id }]);
-        if (!error) { showToast("Actif ajouté !", "success"); fetchAssets(); }
+        const dbData = { ...mapAssetToDb(a), user_id: session.user.id };
+        const { error } = await supabase.from('assets').insert([dbData]);
+        if (error) {
+          showToast(`Erreur Supabase: ${error.message}`, 'error');
+        } else {
+          showToast("Actif ajouté !", "success"); 
+          fetchAssets(); 
+        }
       }} onUpdate={async (a) => {
-        const { error } = await supabase.from('assets').update(a).eq('id', a.id);
-        if (!error) { showToast("Actif mis à jour !", "success"); fetchAssets(); }
+        const dbData = mapAssetToDb(a);
+        const { error } = await supabase.from('assets').update(dbData).eq('id', a.id);
+        if (error) {
+          showToast(`Erreur Supabase: ${error.message}`, 'error');
+        } else {
+          showToast("Actif mis à jour !", "success"); 
+          fetchAssets(); 
+        }
       }} assets={assets} initialAsset={editingAsset} />
     </div>
   );
