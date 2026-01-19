@@ -18,6 +18,9 @@ import { supabase } from './services/supabaseClient.ts';
 import { Asset, PortfolioStats } from './types.ts';
 import { HealthScoreResult, syncMarketPrices } from './services/geminiService.ts';
 
+// Fix: Removed the local declare global for window.aistudio to avoid conflicts with pre-defined environment types.
+// The environment provides window.aistudio which implements hasSelectedApiKey and openSelectKey.
+
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -25,35 +28,27 @@ const App: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [healthScores, setHealthScores] = useState<Record<string, HealthScoreResult>>({});
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isAiReady, setIsAiReady] = useState(false);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [syncing, setSyncing] = useState(false);
   
+  // Settings states
   const [displayName, setDisplayName] = useState(localStorage.getItem('zen_display_name') || '');
   const [avatar, setAvatar] = useState(localStorage.getItem('zen_avatar') || '🧘');
   const [freedomGoal, setFreedomGoal] = useState(() => Number(localStorage.getItem('zen_freedom_goal')) || 1000000);
-
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
   const [isPrivate, setIsPrivate] = useState(() => localStorage.getItem('privateMode') === 'true');
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'EUR');
 
-  const [assets, setAssets] = useState<Asset[]>([]);
-
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session && !displayName) {
-        const name = session.user.email?.split('@')[0] || 'ZenUser';
-        setDisplayName(name);
-        localStorage.setItem('zen_display_name', name);
-      }
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    checkAiKey();
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     if (session) fetchAssets();
-    else setLoading(false);
   }, [session]);
 
   useEffect(() => {
@@ -62,14 +57,33 @@ const App: React.FC = () => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  const checkAiKey = async () => {
+    if (process.env.API_KEY && process.env.API_KEY !== "undefined") {
+      setIsAiReady(true);
+      return;
+    }
+    // Fix: Using casting to access the pre-configured window.aistudio object.
+    const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
+    setIsAiReady(!!hasKey);
+  };
+
+  const handleActivateAi = async () => {
+    try {
+      // Fix: Trigger the API key selection dialog.
+      await (window as any).aistudio?.openSelectKey();
+      // Assume the key selection was successful as per guidelines.
+      setIsAiReady(true);
+      showToast("ZenIA activée avec succès !", "success");
+    } catch (e) {
+      showToast("Impossible d'activer l'IA.", "error");
+    }
+  };
+
   const fetchAssets = async () => {
-    if (!session) return;
-    setLoading(true);
     try {
       const { data, error } = await supabase.from('assets').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      
-      const mappedAssets: Asset[] = (data || []).map(item => ({
+      setAssets((data || []).map(item => ({
         id: item.id,
         name: item.name,
         category: item.category,
@@ -82,19 +96,12 @@ const App: React.FC = () => {
         tags: item.tags,
         user_id: item.user_id,
         created_at: item.created_at
-      }));
-      setAssets(mappedAssets);
+      })));
     } catch (err: any) {
       showToast(err, 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
-  /**
-   * IMPORTANT: Transforme strictement les données Frontend (CamelCase) 
-   * en données Backend Supabase (snake_case) pour éviter les erreurs 400.
-   */
   const mapAssetToDb = (a: any) => ({
     name: a.name,
     category: a.category,
@@ -109,6 +116,10 @@ const App: React.FC = () => {
 
   const handleSyncPrices = async () => {
     if (syncing || assets.length === 0) return;
+    if (!isAiReady) {
+      handleActivateAi();
+      return;
+    }
     setSyncing(true);
     showToast("Synchronisation via ZenIA...", "info");
     try {
@@ -125,16 +136,23 @@ const App: React.FC = () => {
         }
       }
       await fetchAssets();
-      showToast("Positions actualisées !", "success");
+      showToast("Portefeuille à jour !", "success");
     } catch (e: any) {
-      showToast(e.message, "error");
+      // Fix: Handle the "Requested entity was not found." error by prompting key selection again as per Gemini guidelines.
+      if (e.message && e.message.includes("Requested entity was not found.")) {
+        showToast("Session expirée. Veuillez re-sélectionner votre clé API.", "error");
+        setIsAiReady(false);
+        handleActivateAi();
+      } else {
+        showToast(e.message, "error");
+      }
     } finally {
       setSyncing(false);
     }
   };
 
   const showToast = (message: any, type: 'success' | 'error' | 'info' = 'success') => {
-    const text = typeof message === 'string' ? message : (message?.message || "Erreur inconnue");
+    const text = typeof message === 'string' ? message : (message?.message || "Erreur");
     setToast({ message: text, type });
     setTimeout(() => setToast(null), 5000);
   };
@@ -158,19 +176,27 @@ const App: React.FC = () => {
       
       {toast && (
         <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 animate-in fade-in slide-in-from-top-4 max-w-[90vw] ${toast.type === 'success' ? 'bg-emerald-600 text-white border-emerald-500' : toast.type === 'info' ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-rose-600 text-white border-rose-500'}`}>
-          <span className="font-black text-[10px] uppercase tracking-widest leading-relaxed">{toast.message}</span>
+          <span className="font-black text-[10px] uppercase tracking-widest">{toast.message}</span>
         </div>
       )}
 
       <main className="flex-1 md:ml-64 p-4 md:p-10 pb-28 overflow-y-auto">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-            {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
-          </h1>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+              {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
+            </h1>
+            {!isAiReady && (
+              <button onClick={handleActivateAi} className="mt-2 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                ZenIA non connectée • Cliquer pour activer
+              </button>
+            )}
+          </div>
           <div className="flex gap-4">
             {(activeTab === 'dashboard' || activeTab === 'assets') && (
               <>
-                <button onClick={handleSyncPrices} disabled={syncing} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase border dark:border-slate-700 shadow-sm disabled:opacity-50 transition-opacity">
+                <button onClick={handleSyncPrices} disabled={syncing} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase border dark:border-slate-700 shadow-sm disabled:opacity-50">
                   {syncing ? 'Synchro...' : 'Mise à jour'}
                 </button>
                 <button onClick={() => { setEditingAsset(null); setIsModalOpen(true); }} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl hover:scale-105 active:scale-95 transition-all">
@@ -215,12 +241,12 @@ const App: React.FC = () => {
       <AddAssetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={async (a) => {
         const dbData = { ...mapAssetToDb(a), user_id: session.user.id };
         const { error } = await supabase.from('assets').insert([dbData]);
-        if (error) showToast(`Erreur Supabase: ${error.message}`, 'error');
+        if (error) showToast(error.message, 'error');
         else { showToast("Actif ajouté !", "success"); fetchAssets(); }
       }} onUpdate={async (a) => {
         const dbData = mapAssetToDb(a);
         const { error } = await supabase.from('assets').update(dbData).eq('id', a.id);
-        if (error) showToast(`Erreur Supabase: ${error.message}`, 'error');
+        if (error) showToast(error.message, 'error');
         else { showToast("Actif mis à jour !", "success"); fetchAssets(); }
       }} assets={assets} initialAsset={editingAsset} />
     </div>
