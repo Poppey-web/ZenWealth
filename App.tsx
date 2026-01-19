@@ -18,9 +18,6 @@ import { supabase } from './services/supabaseClient.ts';
 import { Asset, PortfolioStats } from './types.ts';
 import { HealthScoreResult, syncMarketPrices } from './services/geminiService.ts';
 
-// Fix: Removed the local declare global for window.aistudio to avoid conflicts with pre-defined environment types.
-// The environment provides window.aistudio which implements hasSelectedApiKey and openSelectKey.
-
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -28,11 +25,10 @@ const App: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [healthScores, setHealthScores] = useState<Record<string, HealthScoreResult>>({});
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
-  const [isAiReady, setIsAiReady] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [syncing, setSyncing] = useState(false);
   
-  // Settings states
+  // Settings
   const [displayName, setDisplayName] = useState(localStorage.getItem('zen_display_name') || '');
   const [avatar, setAvatar] = useState(localStorage.getItem('zen_avatar') || '🧘');
   const [freedomGoal, setFreedomGoal] = useState(() => Number(localStorage.getItem('zen_freedom_goal')) || 1000000);
@@ -43,7 +39,6 @@ const App: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
-    checkAiKey();
     return () => subscription.unsubscribe();
   }, []);
 
@@ -56,28 +51,6 @@ const App: React.FC = () => {
     else document.documentElement.classList.remove('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
-
-  const checkAiKey = async () => {
-    if (process.env.API_KEY && process.env.API_KEY !== "undefined") {
-      setIsAiReady(true);
-      return;
-    }
-    // Fix: Using casting to access the pre-configured window.aistudio object.
-    const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
-    setIsAiReady(!!hasKey);
-  };
-
-  const handleActivateAi = async () => {
-    try {
-      // Fix: Trigger the API key selection dialog.
-      await (window as any).aistudio?.openSelectKey();
-      // Assume the key selection was successful as per guidelines.
-      setIsAiReady(true);
-      showToast("ZenIA activée avec succès !", "success");
-    } catch (e) {
-      showToast("Impossible d'activer l'IA.", "error");
-    }
-  };
 
   const fetchAssets = async () => {
     try {
@@ -102,30 +75,13 @@ const App: React.FC = () => {
     }
   };
 
-  const mapAssetToDb = (a: any) => ({
-    name: a.name,
-    category: a.category,
-    quantity: a.quantity,
-    unit_price: a.unitPrice,
-    value: a.value,
-    yield_apy: a.yieldAPY,
-    fee_percentage: a.feePercentage,
-    tags: Array.isArray(a.tags) ? a.tags : [],
-    change24h: a.change24h || 0,
-  });
-
   const handleSyncPrices = async () => {
     if (syncing || assets.length === 0) return;
-    if (!isAiReady) {
-      handleActivateAi();
-      return;
-    }
     setSyncing(true);
-    showToast("Synchronisation via ZenIA...", "info");
+    showToast("Synchronisation des marchés...", "info");
     try {
       const { updates } = await syncMarketPrices(assets);
       for (const update of updates) {
-        if (!update) continue;
         const asset = assets.find(a => a.id === update.id);
         if (asset && update.unitPrice) {
           await supabase.from('assets').update({ 
@@ -136,16 +92,9 @@ const App: React.FC = () => {
         }
       }
       await fetchAssets();
-      showToast("Portefeuille à jour !", "success");
+      showToast("Portefeuille actualisé !", "success");
     } catch (e: any) {
-      // Fix: Handle the "Requested entity was not found." error by prompting key selection again as per Gemini guidelines.
-      if (e.message && e.message.includes("Requested entity was not found.")) {
-        showToast("Session expirée. Veuillez re-sélectionner votre clé API.", "error");
-        setIsAiReady(false);
-        handleActivateAi();
-      } else {
-        showToast(e.message, "error");
-      }
+      showToast(e.message, "error");
     } finally {
       setSyncing(false);
     }
@@ -182,17 +131,9 @@ const App: React.FC = () => {
 
       <main className="flex-1 md:ml-64 p-4 md:p-10 pb-28 overflow-y-auto">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-              {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
-            </h1>
-            {!isAiReady && (
-              <button onClick={handleActivateAi} className="mt-2 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                ZenIA non connectée • Cliquer pour activer
-              </button>
-            )}
-          </div>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+            {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
+          </h1>
           <div className="flex gap-4">
             {(activeTab === 'dashboard' || activeTab === 'assets') && (
               <>
@@ -239,13 +180,11 @@ const App: React.FC = () => {
       </main>
 
       <AddAssetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={async (a) => {
-        const dbData = { ...mapAssetToDb(a), user_id: session.user.id };
-        const { error } = await supabase.from('assets').insert([dbData]);
+        const { error } = await supabase.from('assets').insert([{...a, unit_price: a.unitPrice, user_id: session.user.id}]);
         if (error) showToast(error.message, 'error');
         else { showToast("Actif ajouté !", "success"); fetchAssets(); }
       }} onUpdate={async (a) => {
-        const dbData = mapAssetToDb(a);
-        const { error } = await supabase.from('assets').update(dbData).eq('id', a.id);
+        const { error } = await supabase.from('assets').update({...a, unit_price: a.unitPrice}).eq('id', a.id);
         if (error) showToast(error.message, 'error');
         else { showToast("Actif mis à jour !", "success"); fetchAssets(); }
       }} assets={assets} initialAsset={editingAsset} />
