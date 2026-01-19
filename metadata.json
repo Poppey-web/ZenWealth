@@ -1,0 +1,7 @@
+{
+  "name": "ZenWealth - Investment Tracker",
+  "description": "A premium, Finary-inspired wealth management platform to track stocks, crypto, real estate, and cash with AI-powered portfolio insights.",
+  "requestFramePermissions": [],
+  "mobile_app_capable": true,
+  "theme_color": "#4f46e5"
+}
