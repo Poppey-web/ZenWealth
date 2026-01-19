@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
   
   // Settings
   const [displayName, setDisplayName] = useState(localStorage.getItem('zen_display_name') || '');
@@ -51,6 +52,10 @@ const App: React.FC = () => {
     else document.documentElement.classList.remove('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
 
   const fetchAssets = async () => {
     try {
@@ -121,6 +126,7 @@ const App: React.FC = () => {
         activeTab={activeTab} setActiveTab={setActiveTab} 
         onLogout={() => supabase.auth.signOut()} 
         username={displayName} avatar={avatar} email={session.user.email}
+        isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
       
       {toast && (
@@ -129,7 +135,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 md:ml-64 p-4 md:p-10 pb-28 overflow-y-auto">
+      <main className={`flex-1 p-4 md:p-10 pb-28 overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-24' : 'md:ml-64'}`}>
         <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
             {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
@@ -157,7 +163,9 @@ const App: React.FC = () => {
                   <PortfolioCharts history={[]} assets={assets} />
                   <AssetList isPrivate={isPrivate} assets={assets} onEditAsset={(a) => { setEditingAsset(a); setIsModalOpen(true); }} />
                 </div>
-                <AIAdvisor assets={assets} onScoresUpdate={setHealthScores} />
+                <div className="space-y-6">
+                   <AIAdvisor assets={assets} onScoresUpdate={setHealthScores} />
+                </div>
               </div>
             </div>
           )}

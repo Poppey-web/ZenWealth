@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient.ts';
-import { GoogleGenAI } from "@google/genai";
 
 interface WatchlistItem {
   id: string;
@@ -34,21 +33,18 @@ const WatchlistView: React.FC<{ userId: string }> = ({ userId }) => {
     setIsAdding(true);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Donne le prix actuel et la variation 24h pour l'actif "${newName}". Réponds en JSON: {"price": 0, "change": 0, "symbol": ""}`,
-      });
-      
-      const resText = response.text || "{}";
-      const cleaned = resText.substring(resText.indexOf('{'), resText.lastIndexOf('}') + 1);
-      const data = JSON.parse(cleaned);
+      // Simulation locale pour remplacer Gemini (API Public optionnelle ou Mock)
+      const data = {
+        symbol: newName.substring(0, 4).toUpperCase(),
+        price: 100 + Math.random() * 500,
+        change: (Math.random() * 4) - 2
+      };
 
       const { data: inserted, error } = await supabase.from('watchlist').insert([{
         name: newName,
-        symbol: data.symbol || '?',
-        price: data.price || 0,
-        change24h: data.change || 0,
+        symbol: data.symbol,
+        price: data.price,
+        change24h: Number(data.change.toFixed(2)),
         user_id: userId
       }]).select();
 
@@ -79,9 +75,9 @@ const WatchlistView: React.FC<{ userId: string }> = ({ userId }) => {
               value={newName} 
               onChange={e => setNewName(e.target.value)}
               placeholder="Ex: Tesla, Solana..." 
-              className="flex-1 md:w-64 px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-sm"
+              className="flex-1 md:w-64 px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-sm text-slate-900 dark:text-white"
             />
-            <button disabled={isAdding} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl">
+            <button disabled={isAdding} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-700 transition-all">
               {isAdding ? '...' : '+ Suivre'}
             </button>
           </form>
@@ -107,7 +103,7 @@ const WatchlistView: React.FC<{ userId: string }> = ({ userId }) => {
             </div>
           ))}
           {items.length === 0 && !loading && (
-            <div className="col-span-full py-20 text-center opacity-30 font-black uppercase text-xs tracking-[0.3em]">Votre liste est vide</div>
+            <div className="col-span-full py-20 text-center opacity-30 font-black uppercase text-xs tracking-[0.3em] dark:text-white">Votre liste est vide</div>
           )}
         </div>
       </div>

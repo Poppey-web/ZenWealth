@@ -33,6 +33,7 @@ const getCategoryColor = (category: AssetCategory) => {
 
 const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsset, aiScores, isPrivate }) => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
   const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
 
   const formatCurrency = (val: number) => {
@@ -41,14 +42,17 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
   };
 
   const groupedAssets = useMemo(() => {
-    const filtered = selectedTag ? assets.filter(a => a.tags?.includes(selectedTag)) : assets;
+    let filtered = assets;
+    if (selectedTag) filtered = filtered.filter(a => a.tags?.includes(selectedTag));
+    if (selectedCategory) filtered = filtered.filter(a => a.category === selectedCategory);
+    
     const groups: Record<string, Asset[]> = {};
     Object.values(AssetCategory).forEach(category => {
       const catAssets = filtered.filter(a => a.category === category);
       if (catAssets.length > 0) groups[category] = catAssets;
     });
     return groups;
-  }, [assets, selectedTag]);
+  }, [assets, selectedTag, selectedCategory]);
 
   const availableTags = useMemo<string[]>(() => {
     const tags = assets.flatMap(a => a.tags || []);
@@ -69,48 +73,68 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsse
         </div>
       )}
 
-      <div className="p-8 md:p-10 border-b border-slate-50 dark:border-slate-800">
-        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mb-8">Vos Positions</h3>
-        <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
-          <button onClick={() => setSelectedTag(null)} className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${!selectedTag ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>Tous</button>
+      <div className="p-8 md:p-10 border-b border-slate-50 dark:border-slate-800 space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Positions</h3>
+          <div className="flex gap-2">
+            <button onClick={() => { setSelectedTag(null); setSelectedCategory(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">Réinitialiser</button>
+          </div>
+        </div>
+        
+        {/* Catégories */}
+        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+          <button 
+            onClick={() => setSelectedCategory(null)}
+            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!selectedCategory ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
+          >Tout</button>
+          {Object.values(AssetCategory).map(cat => (
+            <button 
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
+            >{cat}</button>
+          ))}
+        </div>
+
+        {/* Tags */}
+        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide border-t border-slate-50 dark:border-slate-800 pt-4">
           {availableTags.map(tag => (
-            <button key={tag} onClick={() => setSelectedTag(tag)} className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedTag === tag ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>#{tag}</button>
+            <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? null : tag)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedTag === tag ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 text-indigo-600' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}>#{tag}</button>
           ))}
         </div>
       </div>
 
       <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-        {/* Fix: Explicitly cast Object.entries result to [string, Asset[]][] to prevent TS from inferring "items" as unknown */}
         {(Object.entries(groupedAssets) as [string, Asset[]][]).map(([category, items]) => (
-          <div key={category} className="p-8 md:p-10">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-4">
+          <div key={category} className="p-6 md:p-8">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
                {category}
                <div className="flex-1 h-px bg-slate-50 dark:bg-slate-800" />
             </h4>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {items.map((asset) => (
-                <div key={asset.id} className="flex items-center justify-between group p-5 rounded-[2.5rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-800" onClick={() => onEditAsset?.(asset)}>
-                  <div className="flex items-center gap-6">
-                    <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center text-2xl transition-transform group-hover:scale-110 ${getCategoryColor(asset.category as AssetCategory)}`}>
+                <div key={asset.id} className="flex items-center justify-between group p-4 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-800" onClick={() => onEditAsset?.(asset)}>
+                  <div className="flex items-center gap-5">
+                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl transition-transform group-hover:scale-110 ${getCategoryColor(asset.category as AssetCategory)}`}>
                       {getCategoryIcon(asset.category as AssetCategory)}
                     </div>
                     <div>
-                      <p className="font-black text-slate-900 dark:text-white text-lg">{asset.name}</p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mt-1">{asset.quantity} Unités</p>
+                      <p className="font-black text-slate-900 dark:text-white text-base">{asset.name}</p>
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{asset.quantity} Unités</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-10">
+                  <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="font-black text-slate-900 dark:text-white text-xl leading-none mb-2">{formatCurrency(asset.value)}</p>
+                      <p className="font-black text-slate-900 dark:text-white text-lg leading-none mb-1.5">{formatCurrency(asset.value)}</p>
                       <div className={`text-[10px] font-black ${ (asset.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {(asset.change24h || 0) >= 0 ? '▲' : '▼'} {Math.abs(asset.change24h || 0).toFixed(2)}%
                       </div>
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setAssetToDelete(asset); }}
-                      className="opacity-0 group-hover:opacity-100 p-3 text-slate-300 hover:text-rose-500 transition-all hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl"
+                      className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 transition-all"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 </div>

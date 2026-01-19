@@ -31,32 +31,32 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ assets, onScoresUpdate }) => {
   }, [assets]);
 
   return (
-    <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] shadow-lg p-8 text-white mb-8 border border-white/10 relative overflow-hidden group">
-      <div className="absolute -right-10 -bottom-10 text-[10rem] opacity-5 rotate-12 group-hover:rotate-45 transition-transform duration-1000">📊</div>
-      
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-xl">
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-6 border border-slate-100 dark:border-slate-800 transition-all h-fit">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </div>
         <div>
-          <h3 className="text-xl font-black">ZenStrategy</h3>
-          <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest opacity-70">Analyse Algorithmique en Temps Réel</p>
+          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">ZenStrategy</h3>
+          <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest opacity-70">Analyse Algorithmique</p>
         </div>
       </div>
       
-      <div className="space-y-4 relative z-10">
+      <div className="space-y-3">
         {insights?.split('\n').filter(l => l.trim() !== '').map((line, i) => (
-          <div key={i} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
-            <span className="text-lg">🎯</span>
-            <p className="text-indigo-50 leading-relaxed font-bold text-sm">
+          <div key={i} className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all group">
+            <span className="text-base group-hover:scale-110 transition-transform shrink-0">🎯</span>
+            <p className="text-slate-600 dark:text-slate-300 leading-tight font-bold text-xs">
               {line}
             </p>
           </div>
         ))}
         {(!insights || assets.length === 0) && (
-          <p className="text-indigo-200 text-sm italic p-4">Ajoutez des actifs pour générer votre stratégie personnalisée.</p>
+          <div className="py-6 text-center">
+            <p className="text-slate-400 text-xs italic">Ajoutez des actifs pour générer votre stratégie.</p>
+          </div>
         )}
       </div>
     </div>
