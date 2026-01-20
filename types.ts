@@ -16,12 +16,18 @@ export interface Asset {
   value: number;
   change24h?: number;
   yieldAPY?: number;
-  feePercentage?: number; // Nouveau: Frais de gestion annuels (ex: 0.2 pour 0.2%)
+  feePercentage?: number;
   icon?: string;
   tags?: string[];
   history?: number[];
   created_at?: string;
   user_id?: string;
+}
+
+export interface HealthWeights {
+  volatility: number;
+  liquidity: number;
+  resilience: number;
 }
 
 export interface PortfolioStats {

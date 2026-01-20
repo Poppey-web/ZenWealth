@@ -26,15 +26,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         });
         if (signInError) throw signInError;
       } else {
-        const { error: signUpError, data } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         });
         if (signUpError) throw signUpError;
-        
-        if (data?.user && !data?.session) {
-          setError("Inscription réussie ! Si vous ne recevez pas l'email de confirmation, vérifiez vos spams ou désactivez 'Confirm Email' dans les paramètres Auth de Supabase.");
-        }
+        setError("Inscription réussie ! Vérifiez vos emails.");
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
@@ -44,49 +41,51 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-500">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white mx-auto mb-6 shadow-2xl shadow-indigo-200 dark:shadow-none animate-bounce-slow">
-            <span className="text-3xl font-black italic">ZW</span>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 transition-all duration-1000 relative overflow-hidden">
+      {/* Background blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full" />
+
+      <div className="w-full max-w-xl relative z-10">
+        <div className="text-center mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
+          <div className="w-24 h-24 bg-indigo-600 rounded-6xl flex items-center justify-center text-white mx-auto mb-8 shadow-2xl shadow-indigo-500/30">
+            <span className="text-4xl font-black">ZW</span>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">ZenWealth</h1>
-          <p className="text-slate-400 mt-2 font-bold uppercase tracking-widest text-[10px]">Intelligence Patrimoniale</p>
+          <h1 className="text-6xl font-black text-slate-950 dark:text-white tracking-tighter text-display">ZenWealth</h1>
+          <p className="text-slate-400 mt-6 font-black uppercase tracking-[0.5em] text-[10px]">Wealth Intelligence Hub</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden relative transition-all">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-indigo-600"></div>
-          
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-8">
-            {isLogin ? 'Connexion' : 'Nouvel Investisseur'}
+        <div className="glass-card p-12 md:p-16 rounded-[4rem] shadow-2xl border-white/20 animate-in zoom-in-95 duration-700">
+          <h2 className="text-3xl font-black text-slate-950 dark:text-white mb-10 tracking-tight">
+            {isLogin ? 'Welcome Back' : 'Join the Elite'}
           </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Email</label>
               <input 
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none transition-all font-bold text-slate-900 dark:text-white"
-                placeholder="nom@exemple.com"
+                className="w-full px-8 py-5 rounded-[2rem] bg-slate-100 dark:bg-white/5 border-2 border-transparent focus:border-indigo-600 outline-none transition-all font-black text-slate-950 dark:text-white"
+                placeholder="investor@zenwealth.com"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mot de passe</label>
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none transition-all font-bold text-slate-900 dark:text-white"
+                className="w-full px-8 py-5 rounded-[2rem] bg-slate-100 dark:bg-white/5 border-2 border-transparent focus:border-indigo-600 outline-none transition-all font-black text-slate-950 dark:text-white"
                 placeholder="••••••••"
                 required
               />
             </div>
 
             {error && (
-              <div className={`text-[11px] font-bold p-5 rounded-2xl border leading-relaxed animate-in fade-in slide-in-from-top-2 ${error.includes('réussie') ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+              <div className={`text-[11px] font-black p-6 rounded-[2rem] border animate-in fade-in ${error.includes('réussie') ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
                 {error}
               </div>
             )}
@@ -94,18 +93,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-indigo-100 dark:shadow-none hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 text-sm uppercase tracking-widest"
+              className="w-full bg-indigo-600 text-white py-6 rounded-[2.5rem] font-black shadow-2xl shadow-indigo-500/40 hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 text-xs uppercase tracking-widest"
             >
-              {loading ? 'Traitement...' : isLogin ? 'Démarrer' : 'Rejoindre'}
+              {loading ? 'AUTHENTICATING...' : isLogin ? 'SIGN IN' : 'CREATE ACCOUNT'}
             </button>
           </form>
 
-          <div className="mt-10 text-center">
+          <div className="mt-12 text-center">
             <button 
               onClick={() => setIsLogin(!isLogin)}
-              className="text-xs font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
+              className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-[0.2em] transition-colors"
             >
-              {isLogin ? "S'inscrire" : "Se connecter"}
+              {isLogin ? "DON'T HAVE AN ACCOUNT? JOIN US" : "ALREADY TRACKING? SIGN IN"}
             </button>
           </div>
         </div>

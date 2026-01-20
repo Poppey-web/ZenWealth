@@ -1,97 +1,48 @@
 
 import React from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend, BarChart, Bar, ReferenceLine 
-} from 'recharts';
-import { Asset, ChartDataPoint, AssetCategory } from '../types.ts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChartDataPoint } from '../types.ts';
 
-interface PortfolioChartsProps {
-  history: ChartDataPoint[];
-  assets: Asset[];
-}
-
-const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-const PortfolioCharts: React.FC<PortfolioChartsProps> = ({ history, assets }) => {
-  const pieData = Object.values(AssetCategory).map(category => ({
-    name: category,
-    value: assets.filter(a => a.category === category).reduce((sum, a) => sum + a.value, 0)
-  })).filter(item => item.value > 0);
-
-  const performanceData = Object.values(AssetCategory).map(category => {
-    const categoryAssets = assets.filter(a => a.category === category);
-    if (categoryAssets.length === 0) return null;
-    
-    const totalVal = categoryAssets.reduce((sum, a) => sum + a.value, 0);
-    const totalChange = categoryAssets.reduce((sum, a) => sum + (a.value * (a.change24h || 0) / 100), 0);
-    const prevVal = totalVal - totalChange;
-    const percent = prevVal !== 0 ? (totalChange / prevVal) * 100 : 0;
-    
-    return {
-      name: category,
-      performance: parseFloat(percent.toFixed(2))
-    };
-  }).filter((item): item is { name: AssetCategory; performance: number } => item !== null);
-
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('fr-FR', { notation: 'compact', currency: 'EUR' }).format(val);
-
-  return (
-    <div className="space-y-6 mb-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Evolution Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 min-h-[400px] transition-colors">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Évolution du Patrimoine</h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={history}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(val) => `${formatCurrency(val)}`} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', background: '#0f172a', color: 'white' }} />
-                <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, fill: '#4f46e5' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        {/* Allocation Chart */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 min-h-[400px] transition-colors">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Allocation d'Actifs</h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', background: '#0f172a', color: 'white' }} />
-                <Legend verticalAlign="bottom" align="center" iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="glass-card p-5 rounded-3xl border border-white/20 shadow-6xl backdrop-blur-2xl">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+        <p className="text-xl font-black text-slate-900 dark:text-white">
+          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(payload[0].value)}
+        </p>
       </div>
+    );
+  }
+  return null;
+};
 
-      {/* Performance by Category Chart */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Performance par Catégorie (24h)</h3>
-        </div>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={performanceData} layout="vertical" margin={{ left: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
-              <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 500}} width={100} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', background: '#0f172a', color: 'white' }} />
-              <ReferenceLine x={0} stroke="#e2e8f0" strokeWidth={2} />
-              <Bar dataKey="performance" radius={[0, 4, 4, 0]} barSize={24}>
-                {performanceData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.performance >= 0 ? '#10b981' : '#f43f5e'} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+const PortfolioCharts: React.FC<{ history: ChartDataPoint[] }> = ({ history }) => {
+  return (
+    <div className="glass-card p-10 md:p-14 rounded-[4rem] shadow-2xl transition-all min-h-[500px] flex flex-col mb-16">
+      <div className="mb-14">
+        <h3 className="text-4xl font-black text-slate-950 dark:text-white tracking-tighter leading-none">Performance Orbit</h3>
+        <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] mt-4">Total Net Worth Evolution Index</p>
+      </div>
+      
+      <div className="flex-1 min-h-[350px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={history}>
+            <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="#e2e8f0" className="dark:opacity-5" />
+            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: '900'}} dy={20} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: '700'}} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#4f46e5', strokeWidth: 2, strokeDasharray: '4 4' }} />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#4f46e5" 
+              strokeWidth={6} 
+              dot={{ r: 0 }} 
+              activeDot={{ r: 8, fill: '#4f46e5', stroke: '#fff', strokeWidth: 4 }}
+              animationDuration={2500}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

@@ -1,158 +1,129 @@
 
 import React, { useState, useMemo } from 'react';
-import { Asset, AssetCategory } from '../types.ts';
+import { Asset, AssetCategory, HealthWeights } from '../types.ts';
 import { HealthScoreResult } from '../services/geminiService.ts';
 
 interface AssetListProps {
   assets: Asset[];
   onDeleteAsset?: (id: string) => void;
   onEditAsset?: (asset: Asset) => void;
-  aiScores?: Record<string, HealthScoreResult>;
   isPrivate?: boolean;
+  healthScores?: Record<string, HealthScoreResult>;
+  weights?: HealthWeights;
 }
 
 const getCategoryIcon = (category: AssetCategory) => {
   switch (category) {
-    case AssetCategory.CRYPTO: return '🪙';
-    case AssetCategory.STOCKS: return '📊';
-    case AssetCategory.REAL_ESTATE: return '🏰';
-    case AssetCategory.CASH: return '💰';
-    default: return '📁';
+    case AssetCategory.CRYPTO: return '⌇';
+    case AssetCategory.STOCKS: return '◈';
+    case AssetCategory.REAL_ESTATE: return '▣';
+    case AssetCategory.CASH: return '◎';
+    default: return '✦';
   }
 };
 
-const getCategoryColor = (category: AssetCategory) => {
-  switch (category) {
-    case AssetCategory.CRYPTO: return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
-    case AssetCategory.STOCKS: return 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20';
-    case AssetCategory.REAL_ESTATE: return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-    case AssetCategory.CASH: return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-    default: return 'text-slate-500 bg-slate-500/10 border-slate-500/20';
-  }
-};
-
-const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsset, aiScores, isPrivate }) => {
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
-  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
-
-  const formatCurrency = (val: number) => {
-    if (isPrivate) return '•••• €';
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(val);
-  };
-
-  const groupedAssets = useMemo(() => {
-    let filtered = assets;
-    if (selectedTag) filtered = filtered.filter(a => a.tags?.includes(selectedTag));
-    if (selectedCategory) filtered = filtered.filter(a => a.category === selectedCategory);
-    
-    const groups: Record<string, Asset[]> = {};
-    const categories = Object.values(AssetCategory);
-    
-    categories.forEach(category => {
-      const catAssets = filtered.filter(a => a.category === category);
-      if (catAssets.length > 0) groups[category] = catAssets;
-    });
-    return groups;
-  }, [assets, selectedTag, selectedCategory]);
-
-  const availableTags = useMemo<string[]>(() => {
-    const tags = assets.flatMap(a => a.tags || []);
-    return Array.from(new Set(tags)).sort();
-  }, [assets]);
-
+const HealthIndicator = ({ result, weights }: { result: HealthScoreResult, weights: HealthWeights }) => {
+  const score = result.score;
+  const colorClass = score > 80 ? 'text-emerald-500' : score > 50 ? 'text-amber-500' : 'text-rose-500';
+  
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-all overflow-hidden">
-      {assetToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 dark:border-slate-800">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 text-center">Supprimer l'actif ?</h3>
-            <div className="flex gap-4">
-              <button onClick={() => setAssetToDelete(null)} className="flex-1 px-4 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500">Annuler</button>
-              <button onClick={() => { if (onDeleteAsset) onDeleteAsset(assetToDelete.id); setAssetToDelete(null); }} className="flex-1 px-4 py-4 bg-rose-600 rounded-2xl text-xs font-black uppercase tracking-widest text-white shadow-lg">Confirmer</button>
+    <div className="relative group/health">
+      <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center bg-slate-50 dark:bg-white/5 border border-white/10 transition-all hover:scale-110 cursor-help`}>
+        <span className={`text-[10px] font-black ${colorClass}`}>{score}</span>
+        <span className="text-[6px] font-black text-slate-400 uppercase tracking-tighter">Health</span>
+      </div>
+      
+      <div className="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 w-64 glass-card p-6 rounded-[2.5rem] opacity-0 group-hover/health:opacity-100 pointer-events-none transition-all duration-500 translate-y-4 group-hover/health:translate-y-0 z-[100] shadow-6xl border border-indigo-500/20">
+        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Risk Breakdown</h5>
+        <div className="space-y-4">
+          {[
+            { label: 'Volatility', val: result.metrics.volatility, w: weights.volatility, color: 'bg-indigo-500' },
+            { label: 'Liquidity', val: result.metrics.liquidity, w: weights.liquidity, color: 'bg-emerald-500' },
+            { label: 'Resilience', val: result.metrics.resilience, w: weights.resilience, color: 'bg-amber-500' }
+          ].map((m, i) => (
+            <div key={i} className="flex justify-between items-center">
+              <span className="text-[9px] font-black text-slate-500">{m.label}</span>
+              <div className="flex gap-2 items-center">
+                <div className="w-16 h-1 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                  <div className={`h-full ${m.color}`} style={{ width: `${m.val}%` }} />
+                </div>
+                <span className="text-[8px] font-black">x{m.w.toFixed(1)}</span>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      <div className="p-6 md:p-8 border-b border-slate-50 dark:border-slate-800 space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">Mes Actifs</h3>
-          <button onClick={() => { setSelectedTag(null); setSelectedCategory(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">Réinitialiser</button>
-        </div>
-        
-        {/* Filtre Catégories - Style Pills */}
-        <div className="flex overflow-x-auto gap-2.5 pb-2 scrollbar-hide -mx-2 px-2">
-          <button 
-            onClick={() => setSelectedCategory(null)}
-            className={`px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!selectedCategory ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500'}`}
-          >Tout</button>
-          {Object.values(AssetCategory).map(cat => (
-            <button 
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 ${selectedCategory === cat ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500'}`}
-            >
-              <span>{getCategoryIcon(cat)}</span>
-              <span>{cat}</span>
-            </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+};
 
-        {/* Tags Filtre */}
-        {availableTags.length > 0 && (
-          <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide pt-2">
-            {availableTags.map(tag => (
-              <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? null : tag)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedTag === tag ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 text-indigo-600' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}>#{tag}</button>
-            ))}
-          </div>
-        )}
+const AssetList: React.FC<AssetListProps> = ({ assets, onDeleteAsset, onEditAsset, isPrivate, healthScores, weights }) => {
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
+
+  const filteredAssets = useMemo(() => {
+    return selectedCategory ? assets.filter(a => a.category === selectedCategory) : assets;
+  }, [assets, selectedCategory]);
+
+  return (
+    <section className="animate-in fade-in duration-1000">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 px-2">
+        <div>
+          <h3 className="text-3xl font-black text-slate-950 dark:text-white tracking-tighter leading-none mb-3">Portfolio Assets</h3>
+          <p className="text-slate-400 dark:text-slate-500 font-black uppercase tracking-[0.4em] text-[10px]">Active Inventory Management</p>
+        </div>
+        
+        <div className="flex gap-2 p-1 glass-card rounded-[1.5rem] border-white/20">
+          {[null, ...Object.values(AssetCategory)].map(cat => (
+            <button 
+              key={cat || 'all'}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-[1.2rem] text-[9px] font-black uppercase tracking-widest transition-all ${selectedCategory === cat ? 'bg-slate-950 dark:bg-white text-white dark:text-slate-950 shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+            >{cat || 'All'}</button>
+          ))}
+        </div>
       </div>
 
-      <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-        {(Object.entries(groupedAssets) as [string, Asset[]][]).map(([category, items]) => (
-          <div key={category} className="p-5 md:p-6 bg-slate-50/20 dark:bg-slate-900/40">
-            <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-3">
-               {category}
-               <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-               <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{items.length}</span>
-            </h4>
-            <div className="space-y-3">
-              {items.map((asset) => (
-                <div key={asset.id} className="flex items-center justify-between group p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-md transition-all cursor-pointer border border-slate-50 dark:border-slate-800" onClick={() => onEditAsset?.(asset)}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-11 h-11 rounded-xl border flex items-center justify-center text-lg transition-transform group-hover:scale-105 ${getCategoryColor(asset.category as AssetCategory)}`}>
-                      {getCategoryIcon(asset.category as AssetCategory)}
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-900 dark:text-white text-sm">{asset.name}</p>
-                      <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{asset.quantity} {asset.category === AssetCategory.CASH ? 'Unités' : (asset.category === AssetCategory.CRYPTO ? 'Coins' : 'Actions')}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-5">
-                    <div className="text-right">
-                      <p className="font-black text-slate-900 dark:text-white text-base leading-none mb-1">{formatCurrency(asset.value)}</p>
-                      <div className={`text-[9px] font-black ${ (asset.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {(asset.change24h || 0) >= 0 ? '▲' : '▼'} {Math.abs(asset.change24h || 0).toFixed(2)}%
-                      </div>
-                    </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setAssetToDelete(asset); }}
-                      className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 transition-all"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
+      <div className="grid grid-cols-1 gap-3">
+        {filteredAssets.map((asset) => (
+          <div 
+            key={asset.id} 
+            onClick={() => onEditAsset?.(asset)}
+            className="group relative glass-card rounded-[2rem] p-5 md:px-8 flex items-center justify-between transition-all duration-500 hover:bg-white/95 dark:hover:bg-white/[0.05] hover:shadow-2xl border-2 border-transparent hover:border-indigo-600/10 cursor-pointer"
+          >
+            <div className="flex items-center gap-5 md:gap-8 relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 dark:bg-white flex items-center justify-center text-2xl text-white dark:text-slate-950 shadow-xl group-hover:rotate-6 transition-transform">
+                {getCategoryIcon(asset.category)}
+              </div>
+              <div>
+                <h4 className="text-xl font-black text-slate-950 dark:text-white tracking-tight leading-none mb-1.5">{asset.name}</h4>
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/10 text-slate-400">
+                    {asset.category}
+                  </span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{asset.quantity} Qty</span>
                 </div>
-              ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-8 relative z-10">
+              {healthScores?.[asset.id] && weights && <HealthIndicator result={healthScores[asset.id]} weights={weights} />}
+              <div className="text-right">
+                <p className="text-2xl font-black text-slate-950 dark:text-white text-display leading-none mb-1 tracking-tighter">
+                  {isPrivate ? '••••' : new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(asset.value)}
+                </p>
+                <div className={`text-[9px] font-black ${ (asset.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                   {(asset.change24h || 0) >= 0 ? '▲' : '▼'} {Math.abs(asset.change24h || 0).toFixed(2)}%
+                </div>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDeleteAsset?.(asset.id); }}
+                className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 hover:bg-rose-500 hover:text-white transition-all"
+              >✕</button>
             </div>
           </div>
         ))}
-        {assets.length === 0 && (
-          <div className="p-24 text-center text-slate-400 font-black uppercase tracking-widest text-xs">Aucun actif enregistré</div>
-        )}
       </div>
-    </div>
+    </section>
   );
 };
 
