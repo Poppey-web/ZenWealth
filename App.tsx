@@ -157,7 +157,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className={`flex-1 p-4 md:p-10 pb-28 overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-24' : 'md:ml-64'}`}>
+      {/* pb-28 pour éviter l'overlap avec la bottom nav sur mobile */}
+      <main className={`flex-1 p-4 md:p-10 pb-28 md:pb-10 overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-24' : 'md:ml-64'}`}>
         <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-6">
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
             {activeTab === 'dashboard' ? 'Vue Globale' : activeTab === 'assets' ? 'Portefeuille' : activeTab === 'compare' ? 'Comparateur' : activeTab === 'watchlist' ? 'Suivi' : activeTab === 'recommendations' ? 'Conseils' : activeTab === 'news' ? 'Actualités' : activeTab === 'cashflow' ? 'Flux' : activeTab === 'budget' ? 'Budgets' : 'Réglages'}
